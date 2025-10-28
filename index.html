@@ -144,46 +144,88 @@ function isEquivalent(a, b) {
   let sol="", points=0, round=1, total=10;
 
   /* --------------------- Aufgaben-Generator --------------------- */
-  function createTask(){
-    const VAR=Math.random()<0.5?"a":"b";
-    const t=Math.random();
-    let aufgabe="", solution="";
+ function createTask() {
+  const VAR = Math.random() < 0.5 ? "a" : "b";
+  const t = Math.random();
+  let aufgabe = "", solution = "";
 
-    if(t<0.4){
-      // Brüche addieren mit gleichem Nenner
-      const c1=coeff(), c2=coeff();
-      const denom=[2,3,4,5][randomInt(0,3)];
-      aufgabe=`(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
-      const num=c1+c2, g=gcd(num,denom);
-      const nK=num/g, dK=denom/g;
-      solution = dK===1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
-    }
-    else if(t<0.7){
-      // Brüche subtrahieren
-      const c1=randomInt(3,6), c2=randomInt(2,c1-1);
-      const denom=[2,3,4][randomInt(0,2)];
-      aufgabe=`(${c1}${VAR})/${denom} - (${c2}${VAR})/${denom}`;
-      const num=c1-c2, g=gcd(num,denom);
-      const nK=num/g, dK=denom/g;
-      solution = dK===1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
-    }
-    else {
-      // gemischte Aufgabe (z. B. (2b+16)/4 → b/2 + 4)
-      const c=coeff(), n=randomInt(2,6);
-      const denom=[2,3,4][randomInt(0,2)];
-      aufgabe=`(${c}${VAR} + ${n*denom})/${denom}`;
-      const c2=c/denom;
-      if(Number.isInteger(c2)) {
-        solution=`${c2}${VAR} + ${n}`;
-      } else {
-        const g=gcd(c,denom);
-        solution=`(${c/g}${VAR})/${denom/g} + ${n}`;
-      }
-    }
+  // Hilfsfunktionen
+  const denomSet = [2, 3, 4, 5];
+  const denom = denomSet[randomInt(0, denomSet.length - 1)];
+  const c1 = coeff(), c2 = coeff();
+  const g = gcd(c1 + c2, denom);
 
-    sol=simplify(solution);
-    return aufgabe;
+  // 1) Zwei Brüche addieren
+  if (t < 0.18) {
+    aufgabe = `(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
+    const num = c1 + c2, d = denom / gcd(num, denom);
+    const n = num / gcd(num, denom);
+    solution = d === 1 ? `${n}${VAR}` : `${n}${VAR}/${d}`;
   }
+
+  // 2) Zwei Brüche subtrahieren
+  else if (t < 0.34) {
+    const c1s = randomInt(3, 8);
+    const c2s = randomInt(1, c1s - 1);
+    const denom2 = denomSet[randomInt(0, denomSet.length - 1)];
+    aufgabe = `(${c1s}${VAR})/${denom2} - (${c2s}${VAR})/${denom2}`;
+    const num = c1s - c2s;
+    const g2 = gcd(num, denom2);
+    const nK = num / g2, dK = denom2 / g2;
+    solution = dK === 1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
+  }
+
+  // 3) Gemischter Term mit Teilung
+  else if (t < 0.5) {
+    const c = coeff(), n = randomInt(2, 6);
+    const denom3 = denomSet[randomInt(0, denomSet.length - 1)];
+    aufgabe = `(${c}${VAR} + ${n * denom3})/${denom3}`;
+    const c2 = c / denom3;
+    if (Number.isInteger(c2)) {
+      solution = `${c2}${VAR} + ${n}`;
+    } else {
+      const g3 = gcd(c, denom3);
+      solution = `(${c / g3}${VAR})/${denom3 / g3} + ${n}`;
+    }
+  }
+
+  // 4) Bruch * Zahl
+  else if (t < 0.66) {
+    const denom4 = denomSet[randomInt(0, denomSet.length - 1)];
+    const factor = randomInt(2, 4);
+    const c = coeff();
+    aufgabe = `(${c}${VAR})/${denom4} × ${factor}`;
+    const num = c * factor;
+    const g4 = gcd(num, denom4);
+    const nK = num / g4, dK = denom4 / g4;
+    solution = dK === 1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
+  }
+
+  // 5) Bruch ÷ Zahl
+  else if (t < 0.82) {
+    const denom5 = denomSet[randomInt(0, denomSet.length - 1)];
+    const div = randomInt(2, 4);
+    const c = coeff();
+    aufgabe = `(${c}${VAR})/${denom5} ÷ ${div}`;
+    const newDen = denom5 * div;
+    const g5 = gcd(c, newDen);
+    const nK = c / g5, dK = newDen / g5;
+    solution = dK === 1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
+  }
+
+  // 6) Kürzbarer Zähler mit Summe
+  else {
+    const c = randomInt(2, 4);
+    const n = randomInt(2, 5);
+    const denom6 = c * randomInt(2, 3); // garantiert kürzbar
+    aufgabe = `(${c}${VAR} + ${n * denom6})/${denom6}`;
+    solution = `${VAR}/${denom6 / c} + ${n}`;
+  }
+
+  sol = simplify(solution);
+  return aufgabe;
+}
+
 
   /* --------------------- Eingabefelder erzeugen --------------------- */
   function showInputFieldsForSolution(solution) {
@@ -300,6 +342,7 @@ function isEquivalent(a, b) {
 </script>
 </body>
 </html>
+
 
 
 
