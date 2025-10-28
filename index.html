@@ -18,12 +18,16 @@
     display:inline-block;
     text-align:center;
     vertical-align:middle;
+    line-height:1.1;
     margin:0 4px;
   }
-  .num { border-bottom:2px solid #000; display:block; line-height:1.1; }
-  .den { display:block; line-height:1.1; }
+  .num { border-bottom:2px solid #000; display:block; padding:2px 4px; }
+  .den { display:block; padding:2px 4px; }
+  .frac .frac { font-size:0.85em; } /* verschachtelte Brüche kleiner darstellen */
+
   .result { font-size:1.3em; margin:10px; font-weight:bold; }
   .score { font-size:1em; margin:8px; color:#333; }
+
   input[type=text] {
     padding:8px;
     font-size:1.2em;
@@ -33,45 +37,41 @@
     border:1px solid #aaa;
     margin:4px;
   }
+
   /* ---- Bruch-Eingabefelder ---- */
-/* ---- Bruch-Eingabefelder: direkt zusammenstoßend ---- */
-/* ---- Bruch-Eingabefelder: ohne jeden Abstand ---- */
-.fractionField {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-  margin: 0 6px;
-  line-height: 0;            /* verhindert vertikale Lücken */
-}
+  .fractionField {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin: 0 6px;
+    line-height: 0;
+  }
 
-.fractionField .numInput,
-.fractionField .denInput {
-  width: 80px;
-  text-align: center;
-  font-size: 1.1em;
-  border: 1px solid #aaa;
-  border-radius: 0;
-  background: white;
-  padding: 6px 8px;
-  margin: 0;
-  display: block;
-  line-height: 1;
-}
+  .fractionField .numInput,
+  .fractionField .denInput {
+    width: 80px;
+    text-align: center;
+    font-size: 1.1em;
+    border: 1px solid #aaa;
+    border-radius: 0;
+    background: white;
+    padding: 6px 8px;
+    margin: 0;
+    display: block;
+    line-height: 1;
+  }
 
-.fractionField .numInput {
-  border-bottom: 2px solid #000;  /* echter Bruchstrich */
-}
+  .fractionField .numInput {
+    border-bottom: 2px solid #000;
+  }
 
-.fractionField .denInput {
-  border-top: none;              /* kein Doppelrand */
-  position: relative;
-  top: -1px;                     /* hebt den Nenner leicht an → bündig */
-}
-
-
-
+  .fractionField .denInput {
+    border-top: none;
+    position: relative;
+    top: -1px;
+  }
 
   button {
     background:#007bff;
@@ -103,36 +103,39 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   const randomInt=(min,max)=>Math.floor(Math.random()*(max-min+1))+min;
-  const sign=()=>Math.random()<0.5?"+":"-";
   const coeff=()=>randomInt(2,6);
   const gcd=(a,b)=>b===0?Math.abs(a):gcd(b,a%b);
   const simplify=s=>s.replace(/\s+/g,"").replace(/--/g,"+").replace(/\+-/g,"-").replace(/\b1(?=[a-zA-Z])/g,"").toLowerCase();
 
-  const formatFractions = expr =>
-    expr
-      .replace(/\(([^)]+)\)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`)
-      .replace(/(\d+[a-z]*)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`);
+  /* ---------- Bruchformatierung (auch verschachtelt) ---------- */
+  const formatFractions = expr => {
+    // Doppelbrüche zuerst erkennen ((x)/y)/z oder ((x + ...)/y)/z
+    expr = expr.replace(/\(\(([^)]+)\)\/(\d+)\)\/(\d+)/g, (_, inner, den1, den2) => {
+      return `
+        <span class="frac">
+          <span class="num">
+            <span class="frac">
+              <span class="num">${inner}</span>
+              <span class="den">${den1}</span>
+            </span>
+          </span>
+          <span class="den">${den2}</span>
+        </span>
+      `;
+    });
 
-function isEquivalent(a, b) {
-  const clean = s => simplify(s)
-    .replace(/\s+/g, "")
-    .replace(/\+0/g, "")
-    .replace(/0\+/g, "")
-    .replace(/([a-z])\+/g, "$1 + ")
-    .replace(/\+([a-z])/g, " + $1")
-    .replace(/\+-/g, "-")
-    .replace(/--/g, "+")
-    .replace(/\b1(?=[a-z])/g, "")
-    .toLowerCase();
+    // einfache Brüche mit Klammern
+    expr = expr.replace(/\(([^)]+)\)\/(\d+)/g, (_, num, den) =>
+      `<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`
+    );
 
-  const A = clean(a);
-  const B = clean(b);
+    // einfache Brüche ohne Klammern
+    expr = expr.replace(/([0-9]*[a-z]*)\/(\d+)/g, (_, num, den) =>
+      `<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`
+    );
 
-  // prüfe auf gleiche Terme mit vertauschter Reihenfolge (z. B. a/2+5 == 5+a/2)
-  const sortTerms = s => s.split(/(?=[+-])/).map(x => x.trim()).sort().join("");
-  return A === B || sortTerms(A) === sortTerms(B);
-}
-
+    return expr;
+  };
 
   const task=document.getElementById("task"),
         result=document.getElementById("result"),
@@ -143,199 +146,189 @@ function isEquivalent(a, b) {
 
   let sol="", points=0, round=1, total=10;
 
-  /* --------------------- Aufgaben-Generator --------------------- */
-function createTask() {
-  const VAR = Math.random() < 0.5 ? "a" : "b";
-  const t = Math.random();
-  let aufgabe = "", solution = "";
+  /* ---------- Aufgaben-Generator ---------- */
+  function createTask() {
+    const VAR = Math.random() < 0.5 ? "a" : "b";
+    const t = Math.random();
+    let aufgabe = "", solution = "";
 
-  // Hilfsfunktionen
-  const denomSet = [2, 3, 4, 5];
-  const denom = denomSet[randomInt(0, denomSet.length - 1)];
-  const c1 = coeff(), c2 = coeff();
-  const gcd_ = (a, b) => b === 0 ? a : gcd_(b, a % b);
+    const denomSet = [2,3,4,5];
+    const denom = denomSet[randomInt(0, denomSet.length-1)];
+    const c1 = coeff(), c2 = coeff();
+    const gcd_ = (a,b)=>b===0?a:gcd_(b,a%b);
 
-  /* ---------- 1–8: bestehende Typen ---------- */
-  if (t < 0.14) {
-    aufgabe = `(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
-    const num = c1 + c2, g = gcd_(num, denom);
-    solution = denom / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${denom / g}`;
-  }
-  else if (t < 0.28) {
-    const c1s = randomInt(3, 8);
-    const c2s = randomInt(1, c1s - 1);
-    const denom2 = denomSet[randomInt(0, denomSet.length - 1)];
-    aufgabe = `(${c1s}${VAR})/${denom2} - (${c2s}${VAR})/${denom2}`;
-    const num = c1s - c2s, g2 = gcd_(num, denom2);
-    solution = denom2 / g2 === 1 ? `${num / g2}${VAR}` : `${num / g2}${VAR}/${denom2 / g2}`;
-  }
-  else if (t < 0.42) {
-    const c = coeff(), n = randomInt(2, 6);
-    const denom3 = denomSet[randomInt(0, denomSet.length - 1)];
-    aufgabe = `(${c}${VAR} + ${n * denom3})/${denom3}`;
-    const c2 = c / denom3;
-    if (Number.isInteger(c2)) {
-      solution = `${c2}${VAR} + ${n}`;
-    } else {
-      const g3 = gcd_(c, denom3);
-      solution = `(${c / g3}${VAR})/${denom3 / g3} + ${n}`;
+    if (t < 0.10) {
+      aufgabe = `(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
+      const num = c1 + c2, g = gcd_(num,denom);
+      solution = denom/g===1?`${num/g}${VAR}`:`${num/g}${VAR}/${denom/g}`;
     }
-  }
-  else if (t < 0.56) {
-    const denom4 = denomSet[randomInt(0, denomSet.length - 1)];
-    const factor = randomInt(2, 4);
-    const c = coeff();
-    aufgabe = `(${c}${VAR})/${denom4} × ${factor}`;
-    const num = c * factor, g4 = gcd_(num, denom4);
-    solution = denom4 / g4 === 1 ? `${num / g4}${VAR}` : `${num / g4}${VAR}/${denom4 / g4}`;
-  }
-  else if (t < 0.70) {
-    const denom5 = denomSet[randomInt(0, denomSet.length - 1)];
-    const div = randomInt(2, 4);
-    const c = coeff();
-    aufgabe = `(${c}${VAR})/${denom5} ÷ ${div}`;
-    const newDen = denom5 * div, g5 = gcd_(c, newDen);
-    solution = newDen / g5 === 1 ? `${c / g5}${VAR}` : `${c / g5}${VAR}/${newDen / g5}`;
-  }
-  else if (t < 0.84) {
-    const c = randomInt(2, 4);
-    const n = randomInt(2, 5);
-    const denom6 = c * randomInt(2, 3);
-    aufgabe = `(${c}${VAR} + ${n * denom6})/${denom6}`;
-    solution = `${VAR}/${denom6 / c} + ${n}`;
-  }
-  else if (t < 0.92) {
-    const num1 = coeff(), num2 = coeff();
-    const den1 = denomSet[randomInt(0, denomSet.length - 1)];
-    const den2 = denomSet[randomInt(0, denomSet.length - 1)];
-    aufgabe = `(${num1}${VAR})/${den1} × (${num2})/${den2}`;
-    const num = num1 * num2, den = den1 * den2, g = gcd_(num, den);
-    solution = den / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${den / g}`;
-  }
-  else if (t < 0.97) {
-    const k = randomInt(2, 4);
-    const a = coeff(), b = randomInt(1, 6);
-    const den = denomSet[randomInt(0, denomSet.length - 1)];
-    aufgabe = `${k} × (${a}${VAR} + ${b})/${den}`;
-    const num1 = k * a, num2 = k * b, g = gcd_(num1, den);
-    const n1 = num1 / g, d1 = den / g;
-    const n2 = num2 / g, d2 = den / g;
-    if (d1 === 1 && d2 === 1) {
-      solution = `${n1}${VAR} + ${n2}`;
-    } else if (d1 === d2) {
-      solution = `(${n1}${VAR} + ${n2})/${d1}`;
-    } else {
-      solution = `${n1}${VAR}/${d1} + ${n2}/${d2}`;
+    else if (t < 0.20) {
+      const c1s=randomInt(3,8), c2s=randomInt(1,c1s-1);
+      const denom2=denomSet[randomInt(0,denomSet.length-1)];
+      aufgabe=`(${c1s}${VAR})/${denom2} - (${c2s}${VAR})/${denom2}`;
+      const num=c1s-c2s,g2=gcd_(num,denom2);
+      solution=denom2/g2===1?`${num/g2}${VAR}`:`${num/g2}${VAR}/${denom2/g2}`;
     }
+    else if (t < 0.30) {
+      const c=coeff(), n=randomInt(2,6);
+      const denom3=denomSet[randomInt(0,denomSet.length-1)];
+      aufgabe=`(${c}${VAR} + ${n*denom3})/${denom3}`;
+      const c2=c/denom3;
+      if(Number.isInteger(c2)) solution=`${c2}${VAR} + ${n}`;
+      else { const g3=gcd_(c,denom3); solution=`(${c/g3}${VAR})/${denom3/g3} + ${n}`; }
+    }
+    else if (t < 0.40) {
+      const denom4=denomSet[randomInt(0,denomSet.length-1)];
+      const factor=randomInt(2,4);
+      const c=coeff();
+      aufgabe=`(${c}${VAR})/${denom4} × ${factor}`;
+      const num=c*factor,g4=gcd_(num,denom4);
+      solution=denom4/g4===1?`${num/g4}${VAR}`:`${num/g4}${VAR}/${denom4/g4}`;
+    }
+    else if (t < 0.50) {
+      const denom5=denomSet[randomInt(0,denomSet.length-1)];
+      const div=randomInt(2,4);
+      const c=coeff();
+      aufgabe=`(${c}${VAR})/${denom5} ÷ ${div}`;
+      const newDen=denom5*div,g5=gcd_(c,newDen);
+      solution=newDen/g5===1?`${c/g5}${VAR}`:`${c/g5}${VAR}/${newDen/g5}`;
+    }
+    else if (t < 0.60) {
+      const c=randomInt(2,4);
+      const n=randomInt(2,5);
+      const denom6=c*randomInt(2,3);
+      aufgabe=`(${c}${VAR} + ${n*denom6})/${denom6}`;
+      solution=`${VAR}/${denom6/c} + ${n}`;
+    }
+    else if (t < 0.70) {
+      const num1=coeff(),num2=coeff();
+      const den1=denomSet[randomInt(0,denomSet.length-1)];
+      const den2=denomSet[randomInt(0,denomSet.length-1)];
+      aufgabe=`(${num1}${VAR})/${den1} × (${num2})/${den2}`;
+      const num=num1*num2, den=den1*den2, g=gcd_(num,den);
+      solution=den/g===1?`${num/g}${VAR}`:`${num/g}${VAR}/${den/g}`;
+    }
+    else if (t < 0.80) {
+      const k=randomInt(2,4);
+      const a=coeff(), b=randomInt(1,6);
+      const den=denomSet[randomInt(0,denomSet.length-1)];
+      aufgabe=`${k} × (${a}${VAR} + ${b})/${den}`;
+      const num1=k*a, num2=k*b, g=gcd_(num1,den);
+      const n1=num1/g,d1=den/g,n2=num2/g,d2=den/g;
+      if (d1===1&&d2===1) solution=`${n1}${VAR} + ${n2}`;
+      else if (d1===d2) solution=`(${n1}${VAR} + ${n2})/${d1}`;
+      else solution=`${n1}${VAR}/${d1} + ${n2}/${d2}`;
+    }
+    else if (t < 0.90) {
+      const n1=coeff(),n2=coeff(),n3=coeff();
+      const den=[2,4][randomInt(0,1)];
+      aufgabe=`(${n1}${VAR})/${den} + (${n2}${VAR})/${den} + (${n3}${VAR})/${den}`;
+      const sum=n1+n2+n3,g=gcd_(sum,den);
+      solution=den/g===1?`${sum/g}${VAR}`:`${sum/g}${VAR}/${den/g}`;
+    }
+    else {
+      const innerNum=coeff();
+      const innerDen=[2,3][randomInt(0,1)];
+      const outerDen=[2,3][randomInt(0,1)];
+      const plus=Math.random()<0.5?" + 1":"";
+      aufgabe=`((${innerNum}${VAR})/${innerDen}${plus})/${outerDen}`;
+      if (plus==="") {
+        const num=innerNum,den=innerDen*outerDen,g=gcd_(num,den);
+        solution=den/g===1?`${num/g}${VAR}`:`${num/g}${VAR}/${den/g}`;
+      } else {
+        const num=innerNum,den=innerDen*outerDen,g=gcd_(num,den);
+        const nK=num/g,dK=den/g;
+        solution=`${nK}${VAR}/${dK} + 1/${outerDen}`;
+      }
+    }
+
+    sol=simplify(solution);
+    return aufgabe;
   }
 
-  /* ---------- 9) Addition von 3 Brüchen ---------- */
-  else if (t < 0.985) {
-    const n1 = coeff(), n2 = coeff(), n3 = coeff();
-    const den = [2, 4][randomInt(0, 1)];
-    aufgabe = `(${n1}${VAR})/${den} + (${n2}${VAR})/${den} + (${n3}${VAR})/${den}`;
-    const sum = n1 + n2 + n3;
-    const g = gcd_(sum, den);
-    const nK = sum / g, dK = den / g;
-    solution = dK === 1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
-  }
-
-  /* ---------- 10) Doppelbruch ---------- */
-  else {
-    const innerNum = coeff();
-    const innerDen = [2, 3][randomInt(0, 1)];
-    const outerDen = [2, 3][randomInt(0, 1)];
-    aufgabe = `((${innerNum}${VAR})/${innerDen})/${outerDen}`;
-    const num = innerNum, den = innerDen * outerDen, g = gcd_(num, den);
-    solution = den / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${den / g}`;
-  }
-
-  sol = simplify(solution);
-  return aufgabe;
-}
-
-
-  /* --------------------- Eingabefelder erzeugen --------------------- */
+  /* ---------- Eingabefelder ---------- */
   function showInputFieldsForSolution(solution) {
-    inputArea.innerHTML = "";
-
-    const hasFraction = solution.includes("/");
-    if (!hasFraction) {
-      // einfacher Term
-      const simple = document.createElement("input");
-      simple.type = "text";
-      simple.id = "mainInput";
+    inputArea.innerHTML="";
+    const hasFraction=solution.includes("/");
+    if(!hasFraction){
+      const simple=document.createElement("input");
+      simple.type="text"; simple.id="mainInput";
       inputArea.appendChild(simple);
       return;
     }
 
-    // Bruch vorhanden:
-    const parts = solution.split("+").map(p => p.trim());
-    const isMixed = parts.length === 2;
-    const isFracFirst = parts[0].includes("/");
+    const parts=solution.split("+").map(p=>p.trim());
+    const isMixed=parts.length===2;
+    const isFracFirst=parts[0].includes("/");
 
-    // Eingabeelement für Bruch:
-    const frac = document.createElement("span");
-    frac.className = "fractionField";
-    frac.innerHTML = `
-      <input type="text" class="numInput" id="numInput"><br>
-      <input type="text" class="denInput" id="denInput">
-    `;
+    const frac=document.createElement("span");
+    frac.className="fractionField";
+    frac.innerHTML=`<input type="text" class="numInput" id="numInput"><br><input type="text" class="denInput" id="denInput">`;
 
-    // Eingabeelement für normalen Term:
-    const term = document.createElement("input");
-    term.type = "text";
-    term.id = "mainInput";
+    const term=document.createElement("input");
+    term.type="text"; term.id="mainInput";
 
-    // Kombination entsprechend der Lösung:
-    if (!isMixed) {
+    if(!isMixed){ inputArea.appendChild(frac); }
+    else if(isFracFirst){
       inputArea.appendChild(frac);
-    } else if (isFracFirst) {
-      inputArea.appendChild(frac);
-      const plus = document.createElement("span");
-      plus.textContent = " + ";
+      const plus=document.createElement("span");
+      plus.textContent=" + ";
       inputArea.appendChild(plus);
       inputArea.appendChild(term);
     } else {
       inputArea.appendChild(term);
-      const plus = document.createElement("span");
-      plus.textContent = " + ";
+      const plus=document.createElement("span");
+      plus.textContent=" + ";
       inputArea.appendChild(plus);
       inputArea.appendChild(frac);
     }
   }
 
-  /* --------------------- Eingaben auslesen --------------------- */
-  function collectUserInput(){
-    const num=document.getElementById("numInput");
-    const den=document.getElementById("denInput");
-    const main=document.getElementById("mainInput");
+  /* ---------- Eingaben prüfen ---------- */
+  function check(){
+    const inputNum=document.getElementById("numInput");
+    const inputDen=document.getElementById("denInput");
+    const inputMain=document.getElementById("mainInput");
 
-    if(num && den && main){
-      // gemischter Ausdruck
-      const isFracFirst = sol.trim().startsWith("(") || sol.trim().match(/^[^+]*\//);
-      if(isFracFirst){
-        return simplify(num.value+"/"+den.value+"+"+main.value);
-      } else {
-        return simplify(main.value+"+"+num.value+"/"+den.value);
-      }
-    }
-    else if(num && den){
-      return simplify(num.value+"/"+den.value);
+    const clean=s=>(s?s.replace(/\s+/g,"").replace(/\(\s*/g,"").replace(/\s*\)/g,"").toLowerCase():"");
+    const solution=sol;
+    const hasFrac=solution.includes("/");
+    const hasPlus=solution.includes("+");
+    let correct=false;
+
+    if(!hasFrac){ correct=clean(inputMain?.value)===clean(solution); }
+    else if(hasFrac&&!hasPlus){
+      const [numSol,denSol]=solution.split("/");
+      if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)) correct=true;
     }
     else {
-      return simplify(document.getElementById("mainInput").value);
+      const parts=solution.split(/\s*\+\s*/).map(p=>clean(p));
+      const isFracFirst=parts[0].includes("/");
+      if(isFracFirst){
+        const [numSol,denSol]=parts[0].split("/");
+        const termSol=parts[1];
+        if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)&&clean(inputMain?.value)===clean(termSol)) correct=true;
+      } else {
+        const termSol=parts[0];
+        const [numSol,denSol]=parts[1].split("/");
+        if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)&&clean(inputMain?.value)===clean(termSol)) correct=true;
+      }
     }
+
+    if(correct){ result.style.color="green"; result.textContent="✅ Richtig!"; points++; }
+    else { result.style.color="red"; result.innerHTML=`❌ Falsch! Richtig: ${formatFractions(solution)}`; }
+
+    round++;
+    score.textContent=`Aufgabe ${Math.min(round,total)} von ${total} – Punkte: ${points}`;
   }
 
-  /* --------------------- Ablauf --------------------- */
+  /* ---------- Neue Aufgabe ---------- */
   function newTask(){
     if(round>total){
       task.textContent="🎉 Runde beendet!";
       result.style.color="green";
       result.textContent=`Endstand: ${points}/${total} Punkte.`;
-      round=1;points=0;newBtn.textContent="Neue Runde";
-      return;
+      round=1;points=0;newBtn.textContent="Neue Runde"; return;
     }
     const aufg=createTask();
     task.innerHTML=formatFractions(aufg)+" = ?";
@@ -344,75 +337,6 @@ function createTask() {
     score.textContent=`Aufgabe ${round} von ${total} – Punkte: ${points}`;
   }
 
-function check() {
-  const inputNum = document.getElementById("numInput");
-  const inputDen = document.getElementById("denInput");
-  const inputMain = document.getElementById("mainInput");
-
-  const clean = s => (s ? s.replace(/\s+/g, "").replace(/\(\s*/g,"").replace(/\s*\)/g,"").toLowerCase() : "");
-
-  const solution = sol; // gespeicherte korrekte Lösung
-  const hasFrac = solution.includes("/");
-  const hasPlus = solution.includes("+");
-
-  let correct = false;
-
-  // Kein Bruch → einfacher Vergleich
-  if (!hasFrac) {
-    correct = clean(inputMain?.value) === clean(solution);
-  }
-
-  // Reiner Bruch (z. B. a/2)
-  else if (hasFrac && !hasPlus) {
-    const [numSol, denSol] = solution.split("/");
-    if (clean(inputNum?.value) === clean(numSol) && clean(inputDen?.value) === clean(denSol)) {
-      correct = true;
-    }
-  }
-
-  // Gemischter Ausdruck (Bruch + Term oder Term + Bruch)
-  else {
-    // Zerlege Lösung in Summanden – aber achte auf evtl. Klammern
-    const parts = solution.split(/\s*\+\s*/).map(p => clean(p));
-    const isFracFirst = parts[0].includes("/");
-
-    if (isFracFirst) {
-      const [numSol, denSol] = parts[0].split("/");
-      const termSol = parts[1];
-      if (
-        clean(inputNum?.value) === clean(numSol) &&
-        clean(inputDen?.value) === clean(denSol) &&
-        clean(inputMain?.value) === clean(termSol)
-      ) {
-        correct = true;
-      }
-    } else {
-      const termSol = parts[0];
-      const [numSol, denSol] = parts[1].split("/");
-      if (
-        clean(inputNum?.value) === clean(numSol) &&
-        clean(inputDen?.value) === clean(denSol) &&
-        clean(inputMain?.value) === clean(termSol)
-      ) {
-        correct = true;
-      }
-    }
-  }
-
-  if (correct) {
-    result.style.color = "green";
-    result.textContent = "✅ Richtig!";
-    points++;
-  } else {
-    result.style.color = "red";
-    result.innerHTML = `❌ Falsch! Richtig: ${formatFractions(solution)}`;
-  }
-
-  round++;
-  score.textContent = `Aufgabe ${Math.min(round, total)} von ${total} – Punkte: ${points}`;
-}
-
-
   checkBtn.addEventListener("click",check);
   newBtn.addEventListener("click",newTask);
   newTask();
@@ -420,13 +344,3 @@ function check() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
