@@ -136,37 +136,59 @@ document.addEventListener("DOMContentLoaded", () => {
     return aufgabe;
   }
 
-  function showInputFieldsForSolution(solution){
-    inputArea.innerHTML="";
+ function showInputFieldsForSolution(solution) {
+  inputArea.innerHTML = "";
 
-    if(solution.includes("/")){
-      const parts = solution.split("+").map(s=>s.trim());
-      if(parts.length===1){ // reiner Bruch
-        const fracDiv=document.createElement("div");
-        fracDiv.className="frac-input";
-        fracDiv.innerHTML=`<input type="text" class="numInput" id="numInput"><br><input type="text" class="denInput" id="denInput">`;
-        inputArea.appendChild(fracDiv);
-      } else {
-        // gemischt, z.B. "a + 3/2"
-        const main=document.createElement("input");
-        main.type="text";
-        main.id="mainInput";
-        inputArea.appendChild(main);
-        const plus=document.createElement("span");
-        plus.textContent=" + ";
-        inputArea.appendChild(plus);
-        const fracDiv=document.createElement("span");
-        fracDiv.className="frac-input";
-        fracDiv.innerHTML=`<input type="text" class="numInput" id="numInput"><br><input type="text" class="denInput" id="denInput">`;
-        inputArea.appendChild(fracDiv);
-      }
-    } else {
-      const simple=document.createElement("input");
-      simple.type="text";
-      simple.id="mainInput";
-      inputArea.appendChild(simple);
-    }
+  const hasFraction = solution.includes("/");
+  const hasPlus = solution.includes("+");
+
+  if (!hasFraction) {
+    // nur ein einfacher Term (z. B. 3a + 2)
+    const simple = document.createElement("input");
+    simple.type = "text";
+    simple.id = "mainInput";
+    inputArea.appendChild(simple);
+    return;
   }
+
+  // Bruch vorhanden:
+  const parts = solution.split("+").map(p => p.trim());
+  const isMixed = parts.length === 2;
+  const isFracFirst = parts[0].includes("/");
+
+  // Eingabeelement für Bruch:
+  const frac = document.createElement("span");
+  frac.className = "fractionField";
+  frac.innerHTML = `
+    <input type="text" class="numInput" id="numInput"><br>
+    <input type="text" class="denInput" id="denInput">
+  `;
+
+  // Eingabeelement für normalen Term:
+  const term = document.createElement("input");
+  term.type = "text";
+  term.id = "mainInput";
+
+  // Kombination entsprechend der Lösung:
+  if (!isMixed) {
+    // reiner Bruch (z. B. b/2)
+    inputArea.appendChild(frac);
+  } else if (isFracFirst) {
+    // Bruch zuerst, dann Term (z. B. b/2 + 4)
+    inputArea.appendChild(frac);
+    const plus = document.createElement("span");
+    plus.textContent = " + ";
+    inputArea.appendChild(plus);
+    inputArea.appendChild(term);
+  } else {
+    // Term zuerst, dann Bruch (z. B. 4 + b/2)
+    inputArea.appendChild(term);
+    const plus = document.createElement("span");
+    plus.textContent = " + ";
+    inputArea.appendChild(plus);
+    inputArea.appendChild(frac);
+  }
+}
 
   function collectUserInput(){
     if(document.getElementById("numInput")){
@@ -213,3 +235,4 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
