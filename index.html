@@ -35,6 +35,7 @@
   }
   /* ---- Bruch-Eingabefelder ---- */
 /* ---- Bruch-Eingabefelder: direkt zusammenstoßend ---- */
+/* ---- Bruch-Eingabefelder: ohne jeden Abstand ---- */
 .fractionField {
   display: inline-flex;
   flex-direction: column;
@@ -42,6 +43,7 @@
   justify-content: center;
   vertical-align: middle;
   margin: 0 6px;
+  line-height: 0;            /* verhindert vertikale Lücken */
 }
 
 .fractionField .numInput,
@@ -50,19 +52,24 @@
   text-align: center;
   font-size: 1.1em;
   border: 1px solid #aaa;
-  border-radius: 0;          /* keine Rundung, damit es bündig aussieht */
+  border-radius: 0;
   background: white;
   padding: 6px 8px;
-  margin: 0;                 /* kein Zwischenraum */
+  margin: 0;
+  display: block;
+  line-height: 1;
 }
 
 .fractionField .numInput {
-  border-bottom: 2px solid #000;  /* echter Bruchstrich unten am oberen Feld */
+  border-bottom: 2px solid #000;  /* echter Bruchstrich */
 }
 
 .fractionField .denInput {
-  border-top: none;          /* keine Doppellinie */
+  border-top: none;              /* kein Doppelrand */
+  position: relative;
+  top: -1px;                     /* hebt den Nenner leicht an → bündig */
 }
+
 
 
 
@@ -277,5 +284,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
 
 
