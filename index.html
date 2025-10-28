@@ -34,32 +34,31 @@
     margin:4px;
   }
   /* ---- Bruch-Eingabefelder ---- */
-  .fractionField {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    vertical-align: middle;
-    margin: 0 6px;
-  }
-  .fractionField .numInput,
-  .fractionField .denInput {
-    width: 80px;
-    text-align: center;
-    font-size: 1.1em;
-    border: none;
-    border-radius: 0;
-    background: white;
-  }
-  .fractionField .numInput {
-    margin-bottom: 3px;
-    border-bottom: 2px solid #000; /* echter Bruchstrich */
-    padding-bottom: 2px;
-  }
-  .fractionField .denInput {
-    margin-top: 3px;
-    padding-top: 2px;
-  }
+.fractionField {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0 6px;
+}
+.fractionField .numInput,
+.fractionField .denInput {
+  width: 80px;
+  text-align: center;
+  font-size: 1.1em;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  padding: 4px 6px;
+  background: white;
+}
+.fractionField .numInput {
+  margin-bottom: -2px;  /* rückt die Felder optisch zusammen */
+}
+.fractionField .denInput {
+  margin-top: -2px;     /* schiebt Nenner leicht hoch */
+}
+
 
   button {
     background:#007bff;
@@ -272,3 +271,4 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
