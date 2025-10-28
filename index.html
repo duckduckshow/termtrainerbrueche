@@ -144,7 +144,7 @@ function isEquivalent(a, b) {
   let sol="", points=0, round=1, total=10;
 
   /* --------------------- Aufgaben-Generator --------------------- */
- function createTask() {
+function createTask() {
   const VAR = Math.random() < 0.5 ? "a" : "b";
   const t = Math.random();
   let aufgabe = "", solution = "";
@@ -153,25 +153,22 @@ function isEquivalent(a, b) {
   const denomSet = [2, 3, 4, 5];
   const denom = denomSet[randomInt(0, denomSet.length - 1)];
   const c1 = coeff(), c2 = coeff();
+  const gcd_ = (a, b) => b === 0 ? a : gcd_(b, a % b);
 
-  /* ---------- 1) Zwei Brüche addieren ---------- */
+  /* ---------- 1–8: bestehende Typen ---------- */
   if (t < 0.14) {
     aufgabe = `(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
-    const num = c1 + c2, g = gcd(num, denom);
+    const num = c1 + c2, g = gcd_(num, denom);
     solution = denom / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${denom / g}`;
   }
-
-  /* ---------- 2) Zwei Brüche subtrahieren ---------- */
   else if (t < 0.28) {
     const c1s = randomInt(3, 8);
     const c2s = randomInt(1, c1s - 1);
     const denom2 = denomSet[randomInt(0, denomSet.length - 1)];
     aufgabe = `(${c1s}${VAR})/${denom2} - (${c2s}${VAR})/${denom2}`;
-    const num = c1s - c2s, g2 = gcd(num, denom2);
+    const num = c1s - c2s, g2 = gcd_(num, denom2);
     solution = denom2 / g2 === 1 ? `${num / g2}${VAR}` : `${num / g2}${VAR}/${denom2 / g2}`;
   }
-
-  /* ---------- 3) Gemischter Term mit Teilung ---------- */
   else if (t < 0.42) {
     const c = coeff(), n = randomInt(2, 6);
     const denom3 = denomSet[randomInt(0, denomSet.length - 1)];
@@ -180,57 +177,47 @@ function isEquivalent(a, b) {
     if (Number.isInteger(c2)) {
       solution = `${c2}${VAR} + ${n}`;
     } else {
-      const g3 = gcd(c, denom3);
+      const g3 = gcd_(c, denom3);
       solution = `(${c / g3}${VAR})/${denom3 / g3} + ${n}`;
     }
   }
-
-  /* ---------- 4) Bruch * Zahl ---------- */
   else if (t < 0.56) {
     const denom4 = denomSet[randomInt(0, denomSet.length - 1)];
     const factor = randomInt(2, 4);
     const c = coeff();
     aufgabe = `(${c}${VAR})/${denom4} × ${factor}`;
-    const num = c * factor, g4 = gcd(num, denom4);
+    const num = c * factor, g4 = gcd_(num, denom4);
     solution = denom4 / g4 === 1 ? `${num / g4}${VAR}` : `${num / g4}${VAR}/${denom4 / g4}`;
   }
-
-  /* ---------- 5) Bruch ÷ Zahl ---------- */
   else if (t < 0.70) {
     const denom5 = denomSet[randomInt(0, denomSet.length - 1)];
     const div = randomInt(2, 4);
     const c = coeff();
     aufgabe = `(${c}${VAR})/${denom5} ÷ ${div}`;
-    const newDen = denom5 * div, g5 = gcd(c, newDen);
+    const newDen = denom5 * div, g5 = gcd_(c, newDen);
     solution = newDen / g5 === 1 ? `${c / g5}${VAR}` : `${c / g5}${VAR}/${newDen / g5}`;
   }
-
-  /* ---------- 6) Kürzbarer Zähler mit Summe ---------- */
   else if (t < 0.84) {
     const c = randomInt(2, 4);
     const n = randomInt(2, 5);
-    const denom6 = c * randomInt(2, 3); // garantiert kürzbar
+    const denom6 = c * randomInt(2, 3);
     aufgabe = `(${c}${VAR} + ${n * denom6})/${denom6}`;
     solution = `${VAR}/${denom6 / c} + ${n}`;
   }
-
-  /* ---------- 7) Multiplikation zweier Brüche ---------- */
   else if (t < 0.92) {
     const num1 = coeff(), num2 = coeff();
     const den1 = denomSet[randomInt(0, denomSet.length - 1)];
     const den2 = denomSet[randomInt(0, denomSet.length - 1)];
     aufgabe = `(${num1}${VAR})/${den1} × (${num2})/${den2}`;
-    const num = num1 * num2, den = den1 * den2, g = gcd(num, den);
+    const num = num1 * num2, den = den1 * den2, g = gcd_(num, den);
     solution = den / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${den / g}`;
   }
-
-  /* ---------- 8) Multiplikator mal Binom ---------- */
-  else {
+  else if (t < 0.97) {
     const k = randomInt(2, 4);
     const a = coeff(), b = randomInt(1, 6);
     const den = denomSet[randomInt(0, denomSet.length - 1)];
     aufgabe = `${k} × (${a}${VAR} + ${b})/${den}`;
-    const num1 = k * a, num2 = k * b, g = gcd(num1, den);
+    const num1 = k * a, num2 = k * b, g = gcd_(num1, den);
     const n1 = num1 / g, d1 = den / g;
     const n2 = num2 / g, d2 = den / g;
     if (d1 === 1 && d2 === 1) {
@@ -242,9 +229,31 @@ function isEquivalent(a, b) {
     }
   }
 
+  /* ---------- 9) Addition von 3 Brüchen ---------- */
+  else if (t < 0.985) {
+    const n1 = coeff(), n2 = coeff(), n3 = coeff();
+    const den = [2, 4][randomInt(0, 1)];
+    aufgabe = `(${n1}${VAR})/${den} + (${n2}${VAR})/${den} + (${n3}${VAR})/${den}`;
+    const sum = n1 + n2 + n3;
+    const g = gcd_(sum, den);
+    const nK = sum / g, dK = den / g;
+    solution = dK === 1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
+  }
+
+  /* ---------- 10) Doppelbruch ---------- */
+  else {
+    const innerNum = coeff();
+    const innerDen = [2, 3][randomInt(0, 1)];
+    const outerDen = [2, 3][randomInt(0, 1)];
+    aufgabe = `((${innerNum}${VAR})/${innerDen})/${outerDen}`;
+    const num = innerNum, den = innerDen * outerDen, g = gcd_(num, den);
+    solution = den / g === 1 ? `${num / g}${VAR}` : `${num / g}${VAR}/${den / g}`;
+  }
+
   sol = simplify(solution);
   return aufgabe;
 }
+
 
   /* --------------------- Eingabefelder erzeugen --------------------- */
   function showInputFieldsForSolution(solution) {
@@ -411,6 +420,7 @@ function check() {
 </script>
 </body>
 </html>
+
 
 
 
