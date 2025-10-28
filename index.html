@@ -321,24 +321,31 @@ function check() {
   const inputDen = document.getElementById("denInput");
   const inputMain = document.getElementById("mainInput");
 
-  const clean = s => s?.replace(/\s+/g, "").toLowerCase();
+  const clean = s => (s ? s.replace(/\s+/g, "").replace(/\(\s*/g,"").replace(/\s*\)/g,"").toLowerCase() : "");
 
-  const solution = sol; // globale Variable mit richtiger Lösung
+  const solution = sol; // gespeicherte korrekte Lösung
   const hasFrac = solution.includes("/");
   const hasPlus = solution.includes("+");
+
   let correct = false;
 
+  // Kein Bruch → einfacher Vergleich
   if (!hasFrac) {
-    // nur einfacher Term
-    if (clean(inputMain?.value) === clean(solution)) correct = true;
-  } else if (hasFrac && !hasPlus) {
-    // reiner Bruch
+    correct = clean(inputMain?.value) === clean(solution);
+  }
+
+  // Reiner Bruch (z. B. a/2)
+  else if (hasFrac && !hasPlus) {
     const [numSol, denSol] = solution.split("/");
-    if (clean(inputNum?.value) === clean(numSol) && clean(inputDen?.value) === clean(denSol))
+    if (clean(inputNum?.value) === clean(numSol) && clean(inputDen?.value) === clean(denSol)) {
       correct = true;
-  } else {
-    // gemischter Ausdruck (Term + Bruch)
-    const parts = solution.split("+").map(p => p.trim());
+    }
+  }
+
+  // Gemischter Ausdruck (Bruch + Term oder Term + Bruch)
+  else {
+    // Zerlege Lösung in Summanden – aber achte auf evtl. Klammern
+    const parts = solution.split(/\s*\+\s*/).map(p => clean(p));
     const isFracFirst = parts[0].includes("/");
 
     if (isFracFirst) {
@@ -348,7 +355,9 @@ function check() {
         clean(inputNum?.value) === clean(numSol) &&
         clean(inputDen?.value) === clean(denSol) &&
         clean(inputMain?.value) === clean(termSol)
-      ) correct = true;
+      ) {
+        correct = true;
+      }
     } else {
       const termSol = parts[0];
       const [numSol, denSol] = parts[1].split("/");
@@ -356,7 +365,9 @@ function check() {
         clean(inputNum?.value) === clean(numSol) &&
         clean(inputDen?.value) === clean(denSol) &&
         clean(inputMain?.value) === clean(termSol)
-      ) correct = true;
+      ) {
+        correct = true;
+      }
     }
   }
 
@@ -373,6 +384,8 @@ function check() {
   score.textContent = `Aufgabe ${Math.min(round, total)} von ${total} – Punkte: ${points}`;
 }
 
+}
+
 
   checkBtn.addEventListener("click",check);
   newBtn.addEventListener("click",newTask);
@@ -381,6 +394,7 @@ function check() {
 </script>
 </body>
 </html>
+
 
 
 
