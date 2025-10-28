@@ -113,10 +113,26 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/\(([^)]+)\)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`)
       .replace(/(\d+[a-z]*)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`);
 
-  function isEquivalent(a,b){
-    const normalize=expr=>simplify(expr).split(/(?=[+-])/).sort().join("");
-    return normalize(a)===normalize(b);
-  }
+function isEquivalent(a, b) {
+  const clean = s => simplify(s)
+    .replace(/\s+/g, "")
+    .replace(/\+0/g, "")
+    .replace(/0\+/g, "")
+    .replace(/([a-z])\+/g, "$1 + ")
+    .replace(/\+([a-z])/g, " + $1")
+    .replace(/\+-/g, "-")
+    .replace(/--/g, "+")
+    .replace(/\b1(?=[a-z])/g, "")
+    .toLowerCase();
+
+  const A = clean(a);
+  const B = clean(b);
+
+  // prüfe auf gleiche Terme mit vertauschter Reihenfolge (z. B. a/2+5 == 5+a/2)
+  const sortTerms = s => s.split(/(?=[+-])/).map(x => x.trim()).sort().join("");
+  return A === B || sortTerms(A) === sortTerms(B);
+}
+
 
   const task=document.getElementById("task"),
         result=document.getElementById("result"),
@@ -284,6 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
 
 
 
