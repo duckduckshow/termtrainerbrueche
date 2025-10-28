@@ -14,6 +14,22 @@
   }
   h1 { color:#333; margin:10px 0; font-size:1.8em; }
   #task { font-size:1.8em; margin:15px; }
+  .frac {
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    margin: 0 4px;
+  }
+  .num {
+    border-bottom: 2px solid #000;
+    display: block;
+    line-height: 1.1;
+    padding: 0 4px;
+  }
+  .den {
+    display: block;
+    line-height: 1.1;
+  }
   .result { font-size:1.3em; margin:10px; font-weight:bold; }
   .score { font-size:1em; margin:8px; color:#333; }
   input {
@@ -53,119 +69,125 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-  const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-  const sign = () => Math.random() < 0.5 ? "+" : "-";
-  const coeff = () => randomInt(2, 6);
+  const randomInt = (min,max)=>Math.floor(Math.random()*(max-min+1))+min;
+  const sign = ()=>Math.random()<0.5?"+":"-";
+  const coeff = ()=>randomInt(2,6);
+  const gcd = (a,b)=>b===0?Math.abs(a):gcd(b,a%b);
 
-  const simplify = s => {
-    return s
-      .replace(/\s+/g, "")
-      .replace(/--/g, "+")
-      .replace(/\+\-/g, "-")
-      .replace(/\-\+/g, "-")
-      .replace(/\b1(?=[a-zA-Z])/g, "")
-      .replace(/\+\0|\-0/g, "")
-      .replace(/\+$/, "")
-      .replace(/\-$/, "")
-      .toLowerCase()
-      .trim();
-  };
+  const simplify = s => s.replace(/\s+/g,"").replace(/--/g,"+").replace(/\+-/g,"-").replace(/\b1(?=[a-zA-Z])/g,"").toLowerCase();
 
-  function isEquivalent(a, b) {
-    const normalize = expr => simplify(expr)
-      .split(/(?=[+-])/)
-      .sort()
-      .join("");
-    return normalize(a) === normalize(b);
+  function formatFractions(expr) {
+    // ersetzt (...) / Zahl durch waagrechten Bruch
+    return expr.replace(/\(([^)]+)\)\/(\d+)/g, (_, num, den) => {
+      return `<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`;
+    }).replace(/(\d+[a-z]*)\/(\d+)/g, (_, num, den) => {
+      return `<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`;
+    });
   }
 
-  const task = document.getElementById("task");
-  const result = document.getElementById("result");
-  const score = document.getElementById("score");
-  const answer = document.getElementById("answer");
-  const checkBtn = document.getElementById("checkBtn");
-  const newBtn = document.getElementById("newBtn");
+  function isEquivalent(a,b){
+    const normalize=expr=>simplify(expr).split(/(?=[+-])/).sort().join("");
+    return normalize(a)===normalize(b);
+  }
 
-  let sol = "", points = 0, round = 1, total = 10;
+  const task=document.getElementById("task"),
+        result=document.getElementById("result"),
+        score=document.getElementById("score"),
+        answer=document.getElementById("answer"),
+        checkBtn=document.getElementById("checkBtn"),
+        newBtn=document.getElementById("newBtn");
 
-  function createTask() {
-    const VAR = Math.random() < 0.5 ? "a" : "b";
-    const t = Math.random();
-    let aufgabe = "", solution = "";
+  let sol="", points=0, round=1, total=10;
 
-    if (t < 0.3) {
+  function createTask(){
+    const VAR=Math.random()<0.5?"a":"b";
+    const t=Math.random();
+    let aufgabe="", solution="";
+
+    if(t<0.35){
       // (2a + 4)/2 → a + 2
-      const c = coeff(), n = randomInt(2,6);
-      const denom = [2,3,4][randomInt(0,2)];
-      const s = sign();
-      const sn = s === "+" ? 1 : -1;
-      aufgabe = `(${c}${VAR} ${s} ${n*denom}) / ${denom}`;
-      const c2 = c / denom;
-      const n2 = (sn * n * denom) / denom;
-      solution = `${c2}${VAR} ${n2 >= 0 ? "+" : "-"} ${Math.abs(n2)}`;
+      const c=coeff(), n=randomInt(2,6);
+      const denom=[2,3,4][randomInt(0,2)];
+      aufgabe=`(${c}${VAR} + ${n*denom})/${denom}`;
+      const c2=c/denom, n2=n;
+      if(Number.isInteger(c2)) solution=`${c2}${VAR} + ${n2}`;
+      else {
+        const g=gcd(c,denom);
+        solution=`(${c/g}${VAR})/${denom/g} + ${n}`;
+      }
     }
-    else if (t < 0.5) {
-      // (4a)/2 + (2a)/2 → 3a
-      const c1 = coeff(), c2 = coeff();
-      const denom = [2,3][randomInt(0,1)];
-      aufgabe = `(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
-      const solCoeff = (c1 + c2) / denom;
-      solution = `${solCoeff}${VAR}`;
+    else if(t<0.55){
+      // (5b)/3 + (3b)/3 → 8b/3
+      const c1=coeff(), c2=coeff();
+      const denom=[2,3,4,5][randomInt(0,3)];
+      aufgabe=`(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
+      const num=c1+c2, g=gcd(num,denom);
+      const numK=num/g, denK=denom/g;
+      if(denK===1) solution=`${numK}${VAR}`;
+      else solution=`${numK}${VAR}/${denK}`;
     }
-    else if (t < 0.7) {
+    else if(t<0.75){
       // (6a)/3 - (3a)/3 → a
-      const c1 = randomInt(3,6), c2 = randomInt(2, c1-1);
-      const denom = [2,3][randomInt(0,1)];
-      aufgabe = `(${c1}${VAR})/${denom} - (${c2}${VAR})/${denom}`;
-      const solCoeff = (c1 - c2) / denom;
-      solution = `${solCoeff}${VAR}`;
+      const c1=randomInt(3,6), c2=randomInt(2,c1-1);
+      const denom=[2,3,4,5][randomInt(0,3)];
+      aufgabe=`(${c1}${VAR})/${denom} - (${c2}${VAR})/${denom}`;
+      const num=c1-c2, g=gcd(num,denom);
+      const numK=num/g, denK=denom/g;
+      if(denK===1) solution=`${numK}${VAR}`;
+      else solution=`${numK}${VAR}/${denK}`;
     }
-    else {
+    else{
       // (3a + 6)/3 × 2 → 2a + 4
-      const c = coeff(), n = randomInt(2,6);
-      const denom = [2,3][randomInt(0,1)];
-      const factor = [2,3][randomInt(0,1)];
-      aufgabe = `(${c*denom}${VAR} + ${n*denom}) / ${denom} × ${factor}`;
-      const c2 = (c * denom / denom) * factor;
-      const n2 = (n * denom / denom) * factor;
-      solution = `${c2}${VAR} + ${n2}`;
+      const c=coeff(), n=randomInt(2,6);
+      const denom=[2,3,4][randomInt(0,2)];
+      const factor=[2,3][randomInt(0,1)];
+      aufgabe=`(${c*denom}${VAR} + ${n*denom})/${denom} × ${factor}`;
+      const numCoeff=c*factor, numConst=n*factor;
+      solution=`${numCoeff}${VAR} + ${numConst}`;
     }
 
-    sol = simplify(solution);
+    sol=simplify(solution);
     return aufgabe;
   }
 
-  function newTask() {
-    if (round > total) {
-      task.textContent = "🎉 Runde beendet!";
-      result.style.color = "green";
-      result.textContent = `Endstand: ${points}/${total} Punkte.`;
-      round = 1; points = 0;
-      newBtn.textContent = "Neue Runde";
+  function newTask(){
+    if(round>total){
+      task.textContent="🎉 Runde beendet!";
+      result.style.color="green";
+      result.textContent=`Endstand: ${points}/${total} Punkte.`;
+      round=1;points=0;
+      newBtn.textContent="Neue Runde";
       return;
     }
-    const aufg = createTask();
-    task.textContent = aufg + " = ?";
-    answer.value = "";
-    result.textContent = "";
-    score.textContent = `Aufgabe ${round} von ${total} – Punkte: ${points}`;
+    const aufg=createTask();
+    task.innerHTML=formatFractions(aufg)+" = ?";
+    answer.value="";
+    result.textContent="";
+    score.textContent=`Aufgabe ${round} von ${total} – Punkte: ${points}`;
   }
 
-  function check() {
-    const input = simplify(answer.value);
-    if (!input) { result.style.color="gray"; result.textContent="Bitte gib eine Lösung ein."; return; }
-    if (isEquivalent(input, sol)) {
-      result.style.color = "green"; result.textContent = "✅ Richtig!"; points++;
+  function showSolution(solText){
+    result.style.color="red";
+    result.innerHTML=`❌ Falsch! Richtig: ${formatFractions(solText)}`;
+  }
+
+  function check(){
+    const input=simplify(answer.value);
+    if(!input){result.style.color="gray";result.textContent="Bitte gib eine Lösung ein.";return;}
+    if(isEquivalent(input,sol)){
+      result.style.color="green";
+      result.textContent="✅ Richtig!";
+      points++;
     } else {
-      result.style.color = "red"; result.textContent = `❌ Falsch! Richtig: ${sol}`;
+      showSolution(sol);
     }
     round++;
-    score.textContent = `Aufgabe ${Math.min(round, total)} von ${total} – Punkte: ${points}`;
+    score.textContent=`Aufgabe ${Math.min(round,total)} von ${total} – Punkte: ${points}`;
   }
 
-  checkBtn.addEventListener("click", check);
-  newBtn.addEventListener("click", newTask);
-  answer.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+  checkBtn.addEventListener("click",check);
+  newBtn.addEventListener("click",newTask);
+  answer.addEventListener("keydown",e=>{if(e.key==="Enter")check();});
 
   newTask();
 });
