@@ -33,18 +33,34 @@
     border:1px solid #aaa;
     margin:4px;
   }
-  .frac-input {
-    display:inline-block;
-    vertical-align:middle;
-    text-align:center;
+  /* ---- Bruch-Eingabefelder ---- */
+  .fractionField {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin: 0 6px;
   }
-  .frac-input .numInput, .frac-input .denInput {
-    width:80px;
+  .fractionField .numInput,
+  .fractionField .denInput {
+    width: 80px;
+    text-align: center;
+    font-size: 1.1em;
+    border: none;
+    border-radius: 0;
+    background: white;
   }
-  .frac-input .numInput {
-    border-bottom:2px solid #000;
-    border-radius:0;
+  .fractionField .numInput {
+    margin-bottom: 3px;
+    border-bottom: 2px solid #000; /* echter Bruchstrich */
+    padding-bottom: 2px;
   }
+  .fractionField .denInput {
+    margin-top: 3px;
+    padding-top: 2px;
+  }
+
   button {
     background:#007bff;
     color:white;
@@ -80,9 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const gcd=(a,b)=>b===0?Math.abs(a):gcd(b,a%b);
   const simplify=s=>s.replace(/\s+/g,"").replace(/--/g,"+").replace(/\+-/g,"-").replace(/\b1(?=[a-zA-Z])/g,"").toLowerCase();
 
-  const formatFractions = expr => 
-    expr.replace(/\(([^)]+)\)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`)
-         .replace(/(\d+[a-z]*)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`);
+  const formatFractions = expr =>
+    expr
+      .replace(/\(([^)]+)\)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`)
+      .replace(/(\d+[a-z]*)\/(\d+)/g,(_,num,den)=>`<span class="frac"><span class="num">${num}</span><span class="den">${den}</span></span>`);
 
   function isEquivalent(a,b){
     const normalize=expr=>simplify(expr).split(/(?=[+-])/).sort().join("");
@@ -98,12 +115,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let sol="", points=0, round=1, total=10;
 
+  /* --------------------- Aufgaben-Generator --------------------- */
   function createTask(){
     const VAR=Math.random()<0.5?"a":"b";
     const t=Math.random();
     let aufgabe="", solution="";
 
     if(t<0.4){
+      // Brüche addieren mit gleichem Nenner
       const c1=coeff(), c2=coeff();
       const denom=[2,3,4,5][randomInt(0,3)];
       aufgabe=`(${c1}${VAR})/${denom} + (${c2}${VAR})/${denom}`;
@@ -112,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
       solution = dK===1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
     }
     else if(t<0.7){
+      // Brüche subtrahieren
       const c1=randomInt(3,6), c2=randomInt(2,c1-1);
       const denom=[2,3,4][randomInt(0,2)];
       aufgabe=`(${c1}${VAR})/${denom} - (${c2}${VAR})/${denom}`;
@@ -120,13 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
       solution = dK===1 ? `${nK}${VAR}` : `${nK}${VAR}/${dK}`;
     }
     else {
+      // gemischte Aufgabe (z. B. (2b+16)/4 → b/2 + 4)
       const c=coeff(), n=randomInt(2,6);
       const denom=[2,3,4][randomInt(0,2)];
       aufgabe=`(${c}${VAR} + ${n*denom})/${denom}`;
-      const c2=c/denom, n2=n;
-      if(Number.isInteger(c2))
-        solution=`${c2}${VAR} + ${n2}`;
-      else {
+      const c2=c/denom;
+      if(Number.isInteger(c2)) {
+        solution=`${c2}${VAR} + ${n}`;
+      } else {
         const g=gcd(c,denom);
         solution=`(${c/g}${VAR})/${denom/g} + ${n}`;
       }
@@ -136,71 +157,80 @@ document.addEventListener("DOMContentLoaded", () => {
     return aufgabe;
   }
 
- function showInputFieldsForSolution(solution) {
-  inputArea.innerHTML = "";
+  /* --------------------- Eingabefelder erzeugen --------------------- */
+  function showInputFieldsForSolution(solution) {
+    inputArea.innerHTML = "";
 
-  const hasFraction = solution.includes("/");
-  const hasPlus = solution.includes("+");
-
-  if (!hasFraction) {
-    // nur ein einfacher Term (z. B. 3a + 2)
-    const simple = document.createElement("input");
-    simple.type = "text";
-    simple.id = "mainInput";
-    inputArea.appendChild(simple);
-    return;
-  }
-
-  // Bruch vorhanden:
-  const parts = solution.split("+").map(p => p.trim());
-  const isMixed = parts.length === 2;
-  const isFracFirst = parts[0].includes("/");
-
-  // Eingabeelement für Bruch:
-  const frac = document.createElement("span");
-  frac.className = "fractionField";
-  frac.innerHTML = `
-    <input type="text" class="numInput" id="numInput"><br>
-    <input type="text" class="denInput" id="denInput">
-  `;
-
-  // Eingabeelement für normalen Term:
-  const term = document.createElement("input");
-  term.type = "text";
-  term.id = "mainInput";
-
-  // Kombination entsprechend der Lösung:
-  if (!isMixed) {
-    // reiner Bruch (z. B. b/2)
-    inputArea.appendChild(frac);
-  } else if (isFracFirst) {
-    // Bruch zuerst, dann Term (z. B. b/2 + 4)
-    inputArea.appendChild(frac);
-    const plus = document.createElement("span");
-    plus.textContent = " + ";
-    inputArea.appendChild(plus);
-    inputArea.appendChild(term);
-  } else {
-    // Term zuerst, dann Bruch (z. B. 4 + b/2)
-    inputArea.appendChild(term);
-    const plus = document.createElement("span");
-    plus.textContent = " + ";
-    inputArea.appendChild(plus);
-    inputArea.appendChild(frac);
-  }
-}
-
-  function collectUserInput(){
-    if(document.getElementById("numInput")){
-      const num=document.getElementById("numInput").value.trim();
-      const den=document.getElementById("denInput").value.trim();
-      const main=document.getElementById("mainInput");
-      if(main) return simplify(main.value+"+"+num+"/"+den);
-      else return simplify(num+"/"+den);
+    const hasFraction = solution.includes("/");
+    if (!hasFraction) {
+      // einfacher Term
+      const simple = document.createElement("input");
+      simple.type = "text";
+      simple.id = "mainInput";
+      inputArea.appendChild(simple);
+      return;
     }
-    return simplify(document.getElementById("mainInput").value);
+
+    // Bruch vorhanden:
+    const parts = solution.split("+").map(p => p.trim());
+    const isMixed = parts.length === 2;
+    const isFracFirst = parts[0].includes("/");
+
+    // Eingabeelement für Bruch:
+    const frac = document.createElement("span");
+    frac.className = "fractionField";
+    frac.innerHTML = `
+      <input type="text" class="numInput" id="numInput"><br>
+      <input type="text" class="denInput" id="denInput">
+    `;
+
+    // Eingabeelement für normalen Term:
+    const term = document.createElement("input");
+    term.type = "text";
+    term.id = "mainInput";
+
+    // Kombination entsprechend der Lösung:
+    if (!isMixed) {
+      inputArea.appendChild(frac);
+    } else if (isFracFirst) {
+      inputArea.appendChild(frac);
+      const plus = document.createElement("span");
+      plus.textContent = " + ";
+      inputArea.appendChild(plus);
+      inputArea.appendChild(term);
+    } else {
+      inputArea.appendChild(term);
+      const plus = document.createElement("span");
+      plus.textContent = " + ";
+      inputArea.appendChild(plus);
+      inputArea.appendChild(frac);
+    }
   }
 
+  /* --------------------- Eingaben auslesen --------------------- */
+  function collectUserInput(){
+    const num=document.getElementById("numInput");
+    const den=document.getElementById("denInput");
+    const main=document.getElementById("mainInput");
+
+    if(num && den && main){
+      // gemischter Ausdruck
+      const isFracFirst = sol.trim().startsWith("(") || sol.trim().match(/^[^+]*\//);
+      if(isFracFirst){
+        return simplify(num.value+"/"+den.value+"+"+main.value);
+      } else {
+        return simplify(main.value+"+"+num.value+"/"+den.value);
+      }
+    }
+    else if(num && den){
+      return simplify(num.value+"/"+den.value);
+    }
+    else {
+      return simplify(document.getElementById("mainInput").value);
+    }
+  }
+
+  /* --------------------- Ablauf --------------------- */
   function newTask(){
     if(round>total){
       task.textContent="🎉 Runde beendet!";
@@ -218,11 +248,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function check(){
     const input=collectUserInput();
-    if(!input){result.style.color="gray";result.textContent="Bitte gib eine Lösung ein.";return;}
+    if(!input){
+      result.style.color="gray";
+      result.textContent="Bitte gib eine Lösung ein.";
+      return;
+    }
     if(isEquivalent(input,sol)){
-      result.style.color="green";result.textContent="✅ Richtig!";points++;
+      result.style.color="green";
+      result.textContent="✅ Richtig!";
+      points++;
     } else {
-      result.style.color="red";result.innerHTML=`❌ Falsch! Richtig: ${formatFractions(sol)}`;
+      result.style.color="red";
+      result.innerHTML=`❌ Falsch! Richtig: ${formatFractions(sol)}`;
     }
     round++;
     score.textContent=`Aufgabe ${Math.min(round,total)} von ${total} – Punkte: ${points}`;
@@ -235,4 +272,3 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
-
