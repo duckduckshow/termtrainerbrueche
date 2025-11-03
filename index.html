@@ -290,7 +290,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputDen=document.getElementById("denInput");
     const inputMain=document.getElementById("mainInput");
 
-    const clean=s=>(s?s.replace(/\s+/g,"").replace(/\(\s*/g,"").replace(/\s*\)/g,"").toLowerCase():"");
+    const clean = s => (
+  s
+    ? s
+        .replace(/\s+/g, "")        // Leerzeichen entfernen
+        .replace(/\(\s*/g, "")      // Klammern vorne
+        .replace(/\s*\)/g, "")      // Klammern hinten
+        .replace(/^\+/, "")         // führendes Plus entfernen
+        .toLowerCase()
+    : ""
+);
+
     const solution=sol;
     const hasFrac=solution.includes("/");
     const hasPlus=solution.includes("+");
@@ -344,3 +354,4 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
