@@ -285,52 +285,79 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ---------- Eingaben prüfen ---------- */
-  function check(){
-    const inputNum=document.getElementById("numInput");
-    const inputDen=document.getElementById("denInput");
-    const inputMain=document.getElementById("mainInput");
+/* ---------- Eingaben prüfen ---------- */
+function check() {
+  const inputNum = document.getElementById("numInput");
+  const inputDen = document.getElementById("denInput");
+  const inputMain = document.getElementById("mainInput");
 
-    const clean = s => (
-  s
-    ? s
-        .replace(/\s+/g, "")        // Leerzeichen entfernen
-        .replace(/\(\s*/g, "")      // Klammern vorne
-        .replace(/\s*\)/g, "")      // Klammern hinten
-        .replace(/^\+/, "")         // führendes Plus entfernen
-        .toLowerCase()
-    : ""
-);
-
-    const solution=sol;
-    const hasFrac=solution.includes("/");
-    const hasPlus=solution.includes("+");
-    let correct=false;
-
-    if(!hasFrac){ correct=clean(inputMain?.value)===clean(solution); }
-    else if(hasFrac&&!hasPlus){
-      const [numSol,denSol]=solution.split("/");
-      if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)) correct=true;
-    }
-    else {
-      const parts=solution.split(/\s*\+\s*/).map(p=>clean(p));
-      const isFracFirst=parts[0].includes("/");
-      if(isFracFirst){
-        const [numSol,denSol]=parts[0].split("/");
-        const termSol=parts[1];
-        if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)&&clean(inputMain?.value)===clean(termSol)) correct=true;
-      } else {
-        const termSol=parts[0];
-        const [numSol,denSol]=parts[1].split("/");
-        if(clean(inputNum?.value)===clean(numSol)&&clean(inputDen?.value)===clean(denSol)&&clean(inputMain?.value)===clean(termSol)) correct=true;
-      }
-    }
-
-    if(correct){ result.style.color="green"; result.textContent="✅ Richtig!"; points++; }
-    else { result.style.color="red"; result.innerHTML=`❌ Falsch! Richtig: ${formatFractions(solution)}`; }
-
-    round++;
-    score.textContent=`Aufgabe ${Math.min(round,total)} von ${total} – Punkte: ${points}`;
+  // Vergleichsfunktion: bereinigt beide Seiten gleich
+  function equalClean(a, b) {
+    const normalize = s => (
+      s
+        ? s
+            .replace(/\s+/g, "")      // Leerzeichen entfernen
+            .replace(/\(\s*/g, "")    // überflüssige Klammern
+            .replace(/\s*\)/g, "")
+            .replace(/^(\+)?/, "")    // führendes Plus entfernen
+            .toLowerCase()
+        : ""
+    );
+    return normalize(a) === normalize(b);
   }
+
+  const solution = sol;
+  const hasFrac = solution.includes("/");
+  const hasPlus = solution.includes("+");
+  let correct = false;
+
+  if (!hasFrac) {
+    // einfacher Term
+    correct = equalClean(inputMain?.value, solution);
+  }
+  else if (hasFrac && !hasPlus) {
+    // reiner Bruch
+    const [numSol, denSol] = solution.split("/");
+    if (equalClean(inputNum?.value, numSol) && equalClean(inputDen?.value, denSol))
+      correct = true;
+  }
+  else {
+    // gemischte Terme mit +
+    const parts = solution.split(/\s*\+\s*/).map(p => p.trim());
+    const isFracFirst = parts[0].includes("/");
+
+    if (isFracFirst) {
+      const [numSol, denSol] = parts[0].split("/");
+      const termSol = parts[1];
+      if (
+        equalClean(inputNum?.value, numSol) &&
+        equalClean(inputDen?.value, denSol) &&
+        equalClean(inputMain?.value, termSol)
+      ) correct = true;
+    } else {
+      const termSol = parts[0];
+      const [numSol, denSol] = parts[1].split("/");
+      if (
+        equalClean(inputNum?.value, numSol) &&
+        equalClean(inputDen?.value, denSol) &&
+        equalClean(inputMain?.value, termSol)
+      ) correct = true;
+    }
+  }
+
+  if (correct) {
+    result.style.color = "green";
+    result.textContent = "✅ Richtig!";
+    points++;
+  } else {
+    result.style.color = "red";
+    result.innerHTML = `❌ Falsch! Richtig: ${formatFractions(solution)}`;
+  }
+
+  round++;
+  score.textContent = `Aufgabe ${Math.min(round, total)} von ${total} – Punkte: ${points}`;
+}
+
 
   /* ---------- Neue Aufgabe ---------- */
   function newTask(){
@@ -354,4 +381,5 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
 
